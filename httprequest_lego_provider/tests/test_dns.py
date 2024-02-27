@@ -4,16 +4,22 @@
 
 import secrets
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from git import GitCommandError, Repo
 
-from httprequest_lego_provider.dns import DnsSourceUpdateError, remove_dns_record, write_dns_record
+from httprequest_lego_provider.dns import (
+    DnsSourceUpdateError,
+    parse_repository_url,
+    remove_dns_record,
+    write_dns_record,
+)
 
 
 @patch.object(Path, "write_text")
 @patch.object(Repo, "clone_from")
+@patch("httprequest_lego_provider.dns.GIT_REPO_URL", "git+ssh://user@git.server/repo_name")
 def test_write_dns_record_raises_exception(repo_patch: Mock, _):
     """
     arrange: mock the repo so that it raises a GitCommandError.
@@ -40,6 +46,7 @@ def test_write_dns_record_raises_exception(repo_patch: Mock, _):
 @patch.object(Path, "write_text")
 @patch.object(Path, "read_text")
 @patch.object(Repo, "clone_from")
+@patch("httprequest_lego_provider.dns.GIT_REPO_URL", "git+ssh://user@git.server/repo_name@lego")
 def test_write_dns_record(
     repo_patch: Mock, read_patch: Mock, write_patch: Mock, fqdn: str, record: str
 ):
@@ -59,6 +66,8 @@ def test_write_dns_record(
 
     write_dns_record(fqdn, token)
 
+    repo_patch.assert_called_once_with("git+ssh://user@git.server/repo_name", ANY, branch="lego")
+    repo_mock.config_writer().set_value.assert_called_once_with("user", "name", "user")
     write_patch.assert_called_once_with(
         (
             "site2 600 IN TXT \042sometoken\042\n"
@@ -74,6 +83,7 @@ def test_write_dns_record(
 
 @patch.object(Path, "write_text")
 @patch.object(Repo, "clone_from")
+@patch("httprequest_lego_provider.dns.GIT_REPO_URL", "git+ssh://user@git.server/repo_name")
 def test_remove_dns_record_raises_exception(repo_patch: Mock, _):
     """
     arrange: mock the repo so that it raises a GitCommandError.
@@ -100,6 +110,7 @@ def test_remove_dns_record_raises_exception(repo_patch: Mock, _):
 @patch.object(Path, "write_text")
 @patch.object(Path, "read_text")
 @patch.object(Repo, "clone_from")
+@patch("httprequest_lego_provider.dns.GIT_REPO_URL", "git+ssh://user@git.server/repo_name")
 def test_remove_dns_record(
     repo_patch: Mock, read_patch: Mock, write_patch: Mock, fqdn: str, record: str
 ):
@@ -116,6 +127,8 @@ def test_remove_dns_record(
 
     remove_dns_record(fqdn)
 
+    repo_patch.assert_called_once_with("git+ssh://user@git.server/repo_name", ANY, branch=None)
+    repo_mock.config_writer().set_value.assert_called_once_with("user", "name", "user")
     write_patch.assert_called_once_with(
         "site1 600 IN TXT \042sometoken\042\nsite3 600 IN TXT \042sometoken\042\n",
         encoding="utf-8",
@@ -123,3 +136,19 @@ def test_remove_dns_record(
     repo_mock.index.add.assert_called_with(["example.com.domain"])
     repo_mock.git.commit.assert_called_once()
     repo_mock.remote(name="origin").push.assert_called_once()
+
+
+def test_parse_repository_url():
+    """
+    arrange: do nothing.
+    act: given a set of valid repository connection strings.
+    assert: the connection strings are parsed successfully.
+    """
+    user, url, branch = parse_repository_url("git+ssh://user@git.server/repo_name")
+    assert user == "user"
+    assert url == "git+ssh://user@git.server/repo_name"
+    assert branch is None
+    user, url, branch = parse_repository_url("git+ssh://user1@git.server:8080/repo_name@main")
+    assert user == "user1"
+    assert url == "git+ssh://user1@git.server:8080/repo_name"
+    assert branch == "main"
