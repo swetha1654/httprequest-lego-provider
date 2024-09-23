@@ -1,4 +1,4 @@
-# Quick guide
+# Deploy the Httprequest Lego Provider charm for the first time
 
 ## What you’ll do
 
@@ -6,14 +6,22 @@
 - Integrate with [the PostgreSQL K8s charm](https://charmhub.io/postgresql-k8s).
 - Integrate with [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/#what-is-ingress) by using [NGINX Ingress Integrator](https://charmhub.io/nginx-ingress-integrator/).
 
-## Prerequisites
+## Requirements
 
 - Juju 3 installed.
 - Juju controller and model created.
 
 For more information about how to install Juju, see [Get started with Juju](https://juju.is/docs/olm/get-started-with-juju).
 
-## Deploy the Httprequest Lego Provider charm
+## Steps
+### Set up the tutorial model
+To easily clean up the resources and to separate your workload from the contents of this tutorial, set up a new model with the following command.
+
+```
+juju add-model httprequest-lego-provider-tutorial
+```
+
+### Deploy the Httprequest Lego Provider charm
 
 The HTTPRequest Lego provider requires integration with [the PostgreSQL K8s charm](https://charmhub.io/postgresql-k8s) and [NGINX Ingress Integrator](https://charmhub.io/nginx-ingress-integrator/) for external access:
 
@@ -27,7 +35,7 @@ juju trust postgresql-k8s --scope=cluster
 juju deploy httprequest-lego-provider --channel=latest/edge
 ```
 
-To see the pod created by the charm, run `kubectl get pods` on the namespace for the Juju model you've deployed the charm to. The output is similar to the following:
+To see the pod created by the charm, run `kubectl get pods -n httprequest-lego-provider-tutorial`. The output is similar to the following:
 
 ```bash
 NAME                             READY   STATUS    RESTARTS   AGE
@@ -42,7 +50,7 @@ httprequest-lego-provider/0*  waiting   idle   10.1.180.77         Config git-re
 
 This means the required configurations have not been set yet.
 
-## Configure the Httprequest Lego Provider charm
+### Configure the Httprequest Lego Provider charm
  Provide the configurations `git-repo` and `git-ssh-key` required by the charm:
 
  ```bash
@@ -55,7 +63,7 @@ You can see the message has changed:
 httprequest-lego-provider/0*  waiting   idle   10.1.180.77         Waiting for database integrations
 ```
 
-## Integrate the Httprequest Lego Provider charm
+### Integrate the Httprequest Lego Provider charm
 For the charm to reach active status, integrate the charm with the PostgreSQL K8s charm and the NGINX Ingress Integrator charm:
 
 ```bash
@@ -77,3 +85,9 @@ juju config httprequest-lego-provider django-allowed-hosts=localhost,127.0.0.1,l
 juju config nginx-ingress-integrator path-routes="/admin,/present,/cleanup"
 ```
 
+### Clean up the environment
+Congratulations! You have successfully finished the httprequest-lego-provider tutorial. You can now remove the model environment that you've created using the following command.
+
+```
+juju destroy-model --destroy-storage httprequest-lego-provider-tutorial
+```
