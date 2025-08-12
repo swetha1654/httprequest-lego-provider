@@ -1,3 +1,2 @@
 
 _acme-challenge.temporal.sd.ps6.prod 600 IN TXT "abcd"
-_acme-challenge.example 600 IN TXT "d3VNV_y0dBskP6HiPLH8jbZ8HqlD4JaYJ14FWMU1t3M"
